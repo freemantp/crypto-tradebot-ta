@@ -1,0 +1,5 @@
+.vscode
+.env
+.terraform
+__pycache__
+ticker_ingestor/lykke
