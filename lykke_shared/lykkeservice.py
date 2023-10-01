@@ -5,15 +5,14 @@ import google.protobuf
 from .lykke_api import common_pb2
 from .lykke_api import isalive_pb2
 from .lykke_api import isalive_pb2_grpc
-from .lykke_api import privateService_pb2
 from .lykke_api import privateService_pb2_grpc
 from .lykke_api import publicService_pb2
 from .lykke_api import publicService_pb2_grpc
+from .error_handler import grpc_error_handler
 
 class LykkeService:
 
     def __init__(self, access_token: str, api_endpoint: str = 'hft-apiv2-grpc.lykke.com:443') -> None:
-        # use auth creds
         ssl_credentials = grpc.ssl_channel_credentials()
         token_credentials = grpc.access_token_call_credentials(access_token)
         self.credentials = grpc.composite_channel_credentials(ssl_credentials, token_credentials)
@@ -21,12 +20,14 @@ class LykkeService:
         logging.basicConfig()
 
 
+    @grpc_error_handler
     def is_alive(self):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             monitoring = isalive_pb2_grpc.MonitoringStub(channel)
             isalive = monitoring.IsAlive(isalive_pb2.IsAliveRequest())
             print(f'Exchange API: {isalive.name} {isalive.version}')
 
+    @grpc_error_handler
     def check_balance(self):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             private_api = privateService_pb2_grpc.PrivateServiceStub(channel)
@@ -41,7 +42,9 @@ class LykkeService:
         if error.code != 0:
             logging.error(f'code: {error.code}, msg: {error.message}')
 
+    @grpc_error_handler
     def get_prices(self, pair_id: str):
+
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             public_api = publicService_pb2_grpc.PublicServiceStub(channel)
             prices = public_api.GetPrices(publicService_pb2.PricesRequest(assetPairIds=[pair_id]))
@@ -56,6 +59,7 @@ class LykkeService:
             else:
                 return None
 
+    @grpc_error_handler
     def print_prices(self, pair_id: str):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             public_api = publicService_pb2_grpc.PublicServiceStub(channel)
