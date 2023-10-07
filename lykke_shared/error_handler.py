@@ -1,3 +1,4 @@
+import logging
 from grpc import RpcError
 
 def grpc_error_handler(func):
@@ -5,9 +6,10 @@ def grpc_error_handler(func):
         try:
             return func(self, *args, **kwargs)
         except RpcError as e:
+            logger = logging.getLogger()
             if e.details() == "Stream removed":
-                print("ERROR: The gRPC stream was removed unexpectedly. Handling the error gracefully.")
+                logger.error('ERROR: The gRPC stream was removed unexpectedly. Handling the error gracefully.')
             else:
-                print("An error occurred:", e)
+                logger.exception('An error occurred')
 
     return wrapper

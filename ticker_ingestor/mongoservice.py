@@ -13,7 +13,7 @@ class MongoService:
 
         self.client = MongoClient(uri, tlsCAFile=certifi.where())
         self.database_name = database_name
-        logging.basicConfig()
+        self.logger = logging.getLogger()
 
     def ping(self) -> None:
         result = self.client.admin.command("ping")
@@ -38,7 +38,7 @@ class MongoService:
                 }
             )
         except Exception as e:
-            print(e)
+            self.logger.exception(e)
 
     def indicator_signal_already_emitted(self, timestamp: datetime, indicator: str) -> bool:
         db = self.client[self.database_name]
@@ -71,7 +71,7 @@ class MongoService:
                 }
             )
         except Exception as e:
-            print(e)
+            self.logger.exception(e)
 
 
 
@@ -94,7 +94,7 @@ class MongoService:
                 }
             )
         except Exception as e:
-            print(e)
+            self.logger.exception(e)
 
     def run_aggregation(self, pipeline: list, collection_name: str) -> list:
         try:

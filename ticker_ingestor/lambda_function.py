@@ -1,24 +1,28 @@
 import os
 import json
 import boto3
+import logging
 from datetime import datetime
 from lykke.lykkeservice import LykkeService
 from mongoservice import MongoService
 from signals import OrderSignal, TrendSignal
 from ta_service import TechnicalAnalysisService
 
-mongo_credentials = os.environ['MONGO_CREDENTIALS']
-mongo_server = os.environ['MONGO_HOST']
-mongo_service = MongoService(mongo_server, mongo_credentials, 'tradebot')
-buy_sell_signal_topic = os.environ['ORDER_SNS_TOPIC']
-crypto_currency = 'BTC'
-fiat_currency = 'USD'
+CRYPTO_CURRENCY = 'BTC'
+FIAT_CURRENCY = 'USD'
+
+mongo_service = MongoService(os.environ['MONGO_HOST'], 
+                             os.environ['MONGO_CREDENTIALS'], 
+                             'tradebot')
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
 
 def lambda_handler(event, context):
 
-    price = get_current_price(f'{crypto_currency}{fiat_currency}')
+    price = get_current_price(f'{CRYPTO_CURRENCY}{FIAT_CURRENCY}')
     if price:
-        insert_price( datetime.fromtimestamp(price['timestamp']), price['bid'], price['ask'], f'{crypto_currency}-{fiat_currency}')
+        insert_price( datetime.fromtimestamp(price['timestamp']), price['bid'], price['ask'], f'{CRYPTO_CURRENCY}-{FIAT_CURRENCY}')
 
         ta_service = TechnicalAnalysisService(mongo_service)
         rsi_signal, rsi_value = ta_service.analyze_rsi()
@@ -26,17 +30,17 @@ def lambda_handler(event, context):
         if rsi_signal:        
             macd_signal, macd_signal_line, macd_value = ta_service.analyze_macd()
 
-            print(f'RSI: signal={rsi_signal}, rsi={rsi_value}')
-            print(f'MACD: signal={macd_signal}, macdSignal={macd_signal_line}, macd_value={macd_value}')
-            
+            logger.info('RSI: signal=%s, rsi=%s', rsi_signal, rsi_value)
+            logger.info('MACD: signal=%s, macdSignal=%s, macd_value=%s', macd_signal, macd_signal_line, macd_value)
+                        
             buy_sell_signal = buy_sell_decision(macd_signal.signal, rsi_signal.signal) if macd_signal else None
 
             if buy_sell_signal:
                 ref_time = min(rsi_signal.timestamp, macd_signal.timestamp)
                 if not ta_service.signal_exists(buy_sell_signal, ref_time):
-                    print(f'Order: {buy_sell_signal}')
+                    logger.info('Order: %s', buy_sell_signal)
                     ta_service.insert_signal(datetime.now(), ref_time, buy_sell_signal, price['bid'])
-                    notify_order(buy_sell_signal, crypto_currency, price['bid'])
+                    notify_order(buy_sell_signal, CRYPTO_CURRENCY, price['bid'])
     
         return {
             'statusCode': 200,
@@ -53,7 +57,7 @@ def insert_price(timestamp: datetime, bidPrice: float, askPrice: float, symbol: 
     mongo_service.insert_ticker_entry(timestamp, bidPrice, askPrice, symbol)
 
 def get_current_price(symbol: str):
-    token = os.environ['LYKKE_TOKEN']
+    token = os.environ['LYKKE_HFT_TOKEN']
     lykke_service = LykkeService(token)
     lykke_service.is_alive()
 
@@ -67,6 +71,8 @@ def notify_order(signal: OrderSignal, symbol, price) -> None:
             "symbol": symbol,
             "price": price            
         }
+
+        buy_sell_signal_topic = os.environ['ORDER_SNS_TOPIC']
 
         client = boto3.client('sns')
         client.publish(
