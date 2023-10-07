@@ -6,8 +6,8 @@ from lykke.lykkeservice import LykkeService, OrderSide
 
 FIAT_SYMBOL = 'USD'
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
 

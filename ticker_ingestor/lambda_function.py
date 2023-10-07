@@ -15,8 +15,8 @@ mongo_service = MongoService(os.environ['MONGO_HOST'],
                              os.environ['MONGO_CREDENTIALS'], 
                              'tradebot')
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
 

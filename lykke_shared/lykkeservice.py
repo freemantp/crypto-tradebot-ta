@@ -25,6 +25,7 @@ class LykkeService:
         self.credentials = grpc.composite_channel_credentials(ssl_credentials, token_credentials)
         self.api_endpoint = api_endpoint
         self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
 
 
     @grpc_error_handler

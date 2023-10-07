@@ -14,6 +14,7 @@ class MongoService:
         self.client = MongoClient(uri, tlsCAFile=certifi.where())
         self.database_name = database_name
         self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
 
     def ping(self) -> None:
         result = self.client.admin.command("ping")

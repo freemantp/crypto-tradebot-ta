@@ -7,6 +7,8 @@ def grpc_error_handler(func):
             return func(self, *args, **kwargs)
         except RpcError as e:
             logger = logging.getLogger()
+            logger.setLevel(logging.INFO)
+
             if e.details() == "Stream removed":
                 logger.error('ERROR: The gRPC stream was removed unexpectedly. Handling the error gracefully.')
             else:
