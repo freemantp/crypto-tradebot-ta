@@ -13,6 +13,11 @@ from .lykke_api import privateService_pb2_grpc
 from .lykke_api import publicService_pb2_grpc
 from .error_handler import grpc_error_handler
 
+class ExchangeException(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
 class OrderSide(Enum):
     BUY = 'Buy'
     SELL = 'Sell'
@@ -50,6 +55,7 @@ class LykkeService:
     def _check_error(error: common_pb2.Error):
         if error.code != 0:
             logging.error(f'code: {error.code}, msg: {error.message}')
+            raise ExchangeException(error.message)
 
     @grpc_error_handler
     def get_prices(self, pair_id: str) -> object:
@@ -96,9 +102,10 @@ class LykkeService:
                 request.side = 0 if order_side == OrderSide.BUY else 1
                 self.logger.info('%sing %s %s %s', order_side.value, order_volume, pair_id)
                 response = private_api.PlaceMarketOrder(request)
-                self.logger.info(response)
+                self._check_error(response)
+                return response.payload
             else:
-                self.logger.error('Can\'t %s %s %s, volume must be greater than 0.0001', order_side.value, order_volume, pair_id)
+                raise ExchangeException(f'Can\'t {order_side.value} {order_volume} {pair_id}, volume must be greater than 0.0001')
 
     @grpc_error_handler
     def get_asset_equivalent_volume(self, asset_pair: str, volume: float, side: OrderSide):

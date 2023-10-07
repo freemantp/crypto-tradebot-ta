@@ -2,7 +2,7 @@ import json
 import os
 import logging
 
-from lykke.lykkeservice import LykkeService, OrderSide
+from lykke.lykkeservice import LykkeService, OrderSide, ExchangeException
 
 FIAT_SYMBOL = 'USD'
 
@@ -21,20 +21,39 @@ def lambda_handler(event, context):
 
     available_balance = lykke_service.check_balance(variable_symbol)
 
+    error_msg = ''
+
     if available_balance > 0:        
         logger.info('Got signal to %s %s @ %s', order.value.lower(), order_pair, price)
-        if order == OrderSide.BUY:
-            eq_volume = lykke_service.get_asset_equivalent_volume(order_pair, available_balance, order)
-            lykke_service.place_market_order(order_pair, order, eq_volume)
-        elif order == OrderSide.SELL:
-            lykke_service.place_market_order(order_pair, order, available_balance)
+        try:
+            if order == OrderSide.BUY:
+                eq_volume = lykke_service.get_asset_equivalent_volume(order_pair, available_balance, order)
+                result = lykke_service.place_market_order(order_pair, order, eq_volume)
+            elif order == OrderSide.SELL:
+                result = lykke_service.place_market_order(order_pair, order, available_balance)
+
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({
+                        'order': order.value,
+                        'symbolPair': order_pair,
+                        'price' : result.price,
+                        'orderId' : result.orderId
+                    })
+                }            
+        except ExchangeException as exch_excpt:
+            error_msg = exch_excpt.message
     else:
-        logger.error('Can\'t %s %s @ %s. Available balance: %s %s', order.value, order_pair, price, available_balance, variable_symbol)
+        error_msg = 'Can\'t %s %s @ %s. Available balance: %s %s', order.value, order_pair, price, available_balance, variable_symbol
     
+    logger.error(error_msg)
     return {
-        'statusCode': 200,
-        'body': json.dumps('OK')
-    }
+        'statusCode': 400,
+        'body': json.dumps({
+            'error': error_msg
+        })
+    }            
+
 
 def extract_order_info(sns_event):
     sns_message = json.loads(sns_event['Records'][0]['Sns']['Message'])
@@ -44,6 +63,7 @@ def extract_order_info(sns_event):
 
 if __name__ == "__main__":
     import sys
-    lambda_handler(json.loads(sys.argv[1]), None)
+    r = lambda_handler(json.loads(sys.argv[1]), None)
+    print(r)
 
 
