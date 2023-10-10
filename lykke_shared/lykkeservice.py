@@ -100,9 +100,9 @@ class LykkeService:
                 request.assetPairId = pair_id
                 request.volume = '{:.8f}'.format(order_volume)
                 request.side = 0 if order_side == OrderSide.BUY else 1
-                self.logger.info('%sing %s %s %s', order_side.value, order_volume, pair_id)
+                self.logger.info('%sing %s %s', order_side.value, order_volume, pair_id)
                 response = private_api.PlaceMarketOrder(request)
-                self._check_error(response)
+                self._check_error(response.error)
                 return response.payload
             else:
                 raise ExchangeException(f'Can\'t {order_side.value} {order_volume} {pair_id}, volume must be greater than 0.0001')
