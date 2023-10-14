@@ -2,6 +2,7 @@ import logging
 import math
 import grpc
 import google.protobuf
+from time import strftime, localtime
 from enum import Enum
 
 from .lykke_api import common_pb2
@@ -32,7 +33,6 @@ class LykkeService:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.INFO)
 
-
     @grpc_error_handler
     def is_alive(self):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
@@ -41,7 +41,7 @@ class LykkeService:
             self.logger.info('Exchange API: %s %s', isalive.name, isalive.version)
 
     @grpc_error_handler
-    def check_balance(self, assetId: str):
+    def get_balance(self, assetId: str):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             private_api = privateService_pb2_grpc.PrivateServiceStub(channel)
             balances = private_api.GetBalances(google.protobuf.empty_pb2.Empty())
@@ -49,8 +49,19 @@ class LykkeService:
 
             balance = next((b for b in balances.payload if b.assetId==assetId), None)
             return float(balance.available) if balance else 0
+        
+    @grpc_error_handler
+    def get_transactions(self):
+        with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
+            private_api = privateService_pb2_grpc.PrivateServiceStub(channel)
+            trades = private_api.GetTrades(google.protobuf.empty_pb2.Empty())
+            LykkeService._check_error(trades.error)
+            for trade in trades.payload:
+                side = OrderSide.BUY if trade.side == 0 else OrderSide.SELL
+                time = strftime('%Y-%m-%d %H:%M:%S', localtime(trade.timestamp.seconds))
+                print(f'{time} {side.value} {trade.baseVolume} {trade.baseAssetId} ({trade.quoteVolume} {trade.quoteAssetId}) @ {trade.price}')
+    
                 
-
     @staticmethod
     def _check_error(error: common_pb2.Error):
         if error.code != 0:

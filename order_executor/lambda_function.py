@@ -19,7 +19,7 @@ def lambda_handler(event, context):
     variable_symbol = symbol if order == OrderSide.SELL else FIAT_SYMBOL
     order_pair = f'{symbol}{FIAT_SYMBOL}'
 
-    available_balance = lykke_service.check_balance(variable_symbol)
+    available_balance = lykke_service.get_balance(variable_symbol)
 
     error_msg = ''
 
@@ -32,19 +32,19 @@ def lambda_handler(event, context):
             elif order == OrderSide.SELL:
                 result = lykke_service.place_market_order(order_pair, order, available_balance)
 
-                return {
-                    'statusCode': 200,
-                    'body': json.dumps({
-                        'order': order.value,
-                        'symbolPair': order_pair,
-                        'price' : result.price,
-                        'orderId' : result.orderId
-                    })
-                }            
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'order': order.value,
+                    'symbolPair': order_pair,
+                    'price' : result.price,
+                    'orderId' : result.orderId
+                })
+            }            
         except ExchangeException as exch_excpt:
             error_msg = exch_excpt.message
     else:
-        error_msg = 'Can\'t %s %s @ %s. Available balance: %s %s', order.value, order_pair, price, available_balance, variable_symbol
+        error_msg = f'Can\'t {order.value} {order_pair} @ {price}. Available balance: {available_balance} {variable_symbol}'
     
     logger.error(error_msg)
     return {
