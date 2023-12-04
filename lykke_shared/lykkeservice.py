@@ -51,15 +51,25 @@ class LykkeService:
             return float(balance.available) if balance else 0
         
     @grpc_error_handler
-    def get_transactions(self):
+    def get_transactions(self, limit=10):
         with grpc.secure_channel(self.api_endpoint, self.credentials) as channel:
             private_api = privateService_pb2_grpc.PrivateServiceStub(channel)
-            trades = private_api.GetTrades(google.protobuf.empty_pb2.Empty())
+            trades = private_api.GetTrades(privateService_pb2.TradesRequest(take=limit))
             LykkeService._check_error(trades.error)
+
+            transactions = []
             for trade in trades.payload:
-                side = OrderSide.BUY if trade.side == 0 else OrderSide.SELL
-                time = strftime('%Y-%m-%d %H:%M:%S', localtime(trade.timestamp.seconds))
-                print(f'{time} {side.value} {trade.baseVolume} {trade.baseAssetId} ({trade.quoteVolume} {trade.quoteAssetId}) @ {trade.price}')
+
+                transactions.append({'side': OrderSide.BUY if trade.side == 0 else OrderSide.SELL,
+                     'time': strftime('%Y-%m-%d %H:%M:%S', localtime(trade.timestamp.seconds)),
+                     'baseAssetId': trade.baseAssetId,
+                     'baseVolume': trade.baseVolume,
+                     'quoteAssetId': trade.quoteAssetId,
+                     'quoteVolume': trade.quoteVolume,                     
+                     'price': trade.price                    
+                     })
+            return transactions
+            
     
                 
     @staticmethod

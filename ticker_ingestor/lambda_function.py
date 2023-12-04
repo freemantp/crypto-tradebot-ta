@@ -7,9 +7,11 @@ from lykke.lykkeservice import LykkeService
 from mongoservice import MongoService
 from signals import OrderSignal, TrendSignal
 from ta_service import TechnicalAnalysisService
+from strategy import TradeStrategy, BuySellStrategy
 
 CRYPTO_CURRENCY = 'BTC'
 FIAT_CURRENCY = 'USD'
+STRATEGY: TradeStrategy = TradeStrategy.MACD_RSI
 
 mongo_service = MongoService(os.environ['MONGO_HOST'], 
                              os.environ['MONGO_CREDENTIALS'], 
@@ -84,18 +86,14 @@ def notify_order(signal: OrderSignal, symbol, price) -> None:
 
 def buy_sell_decision(macd: TrendSignal, rsi: TrendSignal) -> OrderSignal:
   
-  if rsi:
-    # Check if the MACD is bullish.
-    if macd == TrendSignal.MACD_BULLISH_CROSSOVER:
-        # Check if the RSI is oversold.
-        if rsi == TrendSignal.RSI_OVERSOLD:
-        # Buy the asset.
-            return OrderSignal.BUY
+    if STRATEGY == TradeStrategy.MACD:
+        return BuySellStrategy.macd_decision(macd)
+    elif STRATEGY == TradeStrategy.RSI:
+        return BuySellStrategy.rsi_decision(rsi)
+    elif STRATEGY == TradeStrategy.MACD_RSI:
+        return BuySellStrategy.macd_rsi_decision(macd, rsi)
     else:
-        # Check if the RSI is overbought.
-        if rsi == TrendSignal.RSI_OVERBOUGHT:
-        # Sell the asset.
-            return OrderSignal.SELL
+        logger.error(f'Can\'t make buy/sell decision. Unsupported strategy: {STRATEGY}')
 
 if __name__ == "__main__":
     print(lambda_handler(None,None))

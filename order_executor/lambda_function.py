@@ -14,6 +14,7 @@ def lambda_handler(event, context):
     order, symbol, price = extract_order_info(event)
 
     token = os.environ['LYKKE_HFT_TOKEN']
+    simulation_mode = os.environ['TRADES_SIMULATED'].lower() == 'true'
     lykke_service = LykkeService(token)
 
     variable_symbol = symbol if order == OrderSide.SELL else FIAT_SYMBOL
@@ -22,9 +23,11 @@ def lambda_handler(event, context):
     available_balance = lykke_service.get_balance(variable_symbol)
 
     error_msg = ''
+    
+    logger.info(f'Simulation mode: {simulation_mode}')
+    logger.info('Got signal to %s %s @ %s', order.value.lower(), order_pair, price)
 
-    if available_balance > 0:        
-        logger.info('Got signal to %s %s @ %s', order.value.lower(), order_pair, price)
+    if available_balance > 0 and not simulation_mode:       
         try:
             if order == OrderSide.BUY:
                 eq_volume = lykke_service.get_asset_equivalent_volume(order_pair, available_balance, order)
@@ -65,5 +68,3 @@ if __name__ == "__main__":
     import sys
     r = lambda_handler(json.loads(sys.argv[1]), None)
     print(r)
-
-
