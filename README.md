@@ -15,6 +15,7 @@ The trade bot is built as a set of AWS Lambda functions that interact with the L
 3. Execute trades on the exchange based on signals
 
 ## Architecture
+<img width="640" alt="tabot-arch" src="https://github.com/user-attachments/assets/3c3fa317-3da4-4af6-963f-4864091a828a" />
 
 The system consists of three main components:
 
