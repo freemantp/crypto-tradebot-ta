@@ -5,8 +5,6 @@ import logging
 from datetime import datetime
 from signals import OrderSignal
 
-from ta_aggregations import macd_pipeline
-
 class MongoService:
     def __init__(self, server: str, credentials: str, database_name: str) -> None:
         uri = f"mongodb+srv://{credentials}@{server}/?authSource=%24external&authMechanism=MONGODB-AWS&retryWrites=true&w=majority&connectTimeoutMS=5000"
