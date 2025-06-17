@@ -1,4 +1,4 @@
 grpcio==1.57.0
-protobuf==4.24.1
+protobuf==4.25.8
 pymongo==4.6.3
 pymongo-auth-aws==1.1.0
